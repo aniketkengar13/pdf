@@ -1,0 +1,327 @@
+import re
+import pdfplumber
+import pandas as pd
+from collections import defaultdict
+
+class ResearchPaperAnalyzer:
+    def __init__(self, pdf_path):
+        self.pdf_path = pdf_path
+        self.text = self.extract_text_from_pdf()
+        self.parameters = defaultdict(lambda: "Not found")
+    
+    def extract_text_from_pdf(self):
+        """Extract text from PDF using pdfplumber"""
+        full_text = ""
+        try:
+            with pdfplumber.open(self.pdf_path) as pdf:
+                for page in pdf.pages:
+                    full_text += page.extract_text() + "\n"
+            return full_text
+        except Exception as e:
+            print(f"Error reading PDF: {e}")
+            return ""
+    
+    def analyze_parameters(self):
+        """Run all analysis methods"""
+        if not self.text:
+            return
+        
+        analysis_methods = [
+            self.extract_working_material,
+            self.extract_material_composition,
+            self.extract_precursor,
+            self.extract_synthesis_method,
+            self.extract_binder_info,
+            self.extract_material_phase,
+            self.extract_morphology,
+            self.extract_porosity,
+            self.extract_surface_area,
+            self.extract_current_collector,
+            self.extract_electrolyte,
+            self.extract_electrode_config,
+            self.extract_potential_window,
+            self.extract_current_density,
+            self.extract_scan_rate,
+            self.extract_capacitance,
+            self.extract_capacity,
+            self.extract_power_energy_density,
+            self.extract_stability,
+            self.extract_doi
+        ]
+        
+        for method in analysis_methods:
+            method()
+    
+    # Extraction methods for each parameter
+    def extract_working_material(self):
+        patterns = [
+            r'working material[:\s-]+([\w\s\/,]+)',
+            r'active material[:\s-]+([\w\s\/,]+)',
+            r'electrode material[:\s-]+([\w\s\/,]+)'
+        ]
+        self._search_patterns(patterns, "Working material")
+    
+    def extract_material_composition(self):
+        patterns = [
+            r'(composite|doping|doped|hybrid|nanocomposite|bare|modified) [\w\s]+',
+            r'(?:using|with|of) ([a-zA-Z0-9\s-]+ (?:composite|doped))'
+        ]
+        self._search_patterns(patterns, "Material composition")
+    
+    def extract_precursor(self):
+        patterns = [
+            r'precursor[:\s-]+([\w\s,()]+)',
+            r'synthesized from ([\w\s,]+)',
+            r'starting materials?[:\s-]+([\w\s,]+)'
+        ]
+        self._search_patterns(patterns, "Precursor")
+    
+    def extract_synthesis_method(self):
+        patterns = [
+            r'synthesized by ([\w\s-]+) method',
+            r'prepared via ([\w\s-]+)',
+            r'fabricated using ([\w\s-]+) technique'
+        ]
+        self._search_patterns(patterns, "Synthesis method")
+    
+    def extact_binder_info(self):
+        patterns = [
+            r'(without binder|binder-free)',
+            r'with ([\w\s]+) binder',
+            r'binder[:\s-]+([\w\s]+)'
+        ]
+        self._search_patterns(patterns, "Binder info")
+    
+    def extract_material_phase(self):
+        patterns = [
+            r'(amorphous|crystalline) (?:phase|structure)',
+            r'XRD (?:analysis|pattern) (?:shows|indicates) (amorphous|crystalline)',
+            r'(?:highly )?crystalline (?:nature|phase)'
+        ]
+        self._search_patterns(patterns, "Material phase")
+    
+    def extract_morphology(self):
+        patterns = [
+            r'(0D|1D|2D|3D) (?:nanostructures?|morphology)',
+            r'(nanoparticles|nanowires|nanotubes|nanosheets|quantum dots)',
+            r'(spherical|rod-like|sheet-like|flower-like) morphology'
+        ]
+        self._search_patterns(patterns, "Morphology")
+    
+    def extract_porosity(self):
+        patterns = [
+            r'(porous|solid) (?:structure|material)',
+            r'(?:high|low) porosity',
+            r'(?:mesoporous|microporous|macroporous)'
+        ]
+        self._search_patterns(patterns, "Porosity")
+    
+    def extract_surface_area(self):
+        patterns = [
+            r'specific surface area[:\s-]+([\d.]+)\s*m2/g',
+            r'BET surface area[:\s-]+([\d.]+)\s*m2/g',
+            r'SSA[:\s-]+([\d.]+)\s*m2/g'
+        ]
+        self._search_patterns(patterns, "Surface area")
+    
+    def extract_current_collector(self):
+        patterns = [
+            r'current collector[:\s-]+([\w\s]+)',
+            r'(?:on|using) ([\w\s]+) (?:as|for) current collector'
+        ]
+        self._search_patterns(patterns, "Current collector")
+    
+    def extract_electrolyte(self):
+        patterns = [
+            r'electrolyte[:\s-]+([\w\s,]+)',
+            r'([\w\s]+) electrolyte was used',
+            r'in ([\w\s]+) electrolyte'
+        ]
+        self._search_patterns(patterns, "Electrolyte")
+    
+    def extract_electrode_config(self):
+        patterns = [
+            r'counter electrode[:\s-]+([\w\s]+)',
+            r'reference electrode[:\s-]+([\w\s]+)',
+            r'three-electrode system'
+        ]
+        self._search_patterns([
+            r'counter electrode[:\s-]+([\w\s]+)',
+            r'CE[:\s-]+([\w\s]+)'
+        ], "Counter electrode")
+        
+        self._search_patterns([
+            r'reference electrode[:\s-]+([\w\s]+)',
+            r'RE[:\s-]+([\w\s]+)'
+        ], "Reference electrode")
+    
+    def extract_potential_window(self):
+        patterns = [
+            r'potential window[:\s-]+([-\d.]+)\s*V to ([-\d.]+)\s*V',
+            r'voltage range[:\s-]+([-\d.]+)\s*-\s*([-\d.]+)\s*V',
+            r'between ([\d.-]+) and ([\d.-]+) V vs\.'
+        ]
+        self._search_patterns(patterns, "Potential window")
+    
+    def extract_current_density(self):
+        patterns = [
+            r'current density[:\s-]+([\d.]+)\s*A/g',
+            r'at ([\d.]+)\s*A g\^{-1}',
+            r'(\d+)\s*mA/cm2'
+        ]
+        self._search_patterns(patterns, "Current density")
+    
+    def extract_scan_rate(self):
+        patterns = [
+            r'scan rate[:\s-]+([\d.]+)\s*mV/s',
+            r'(\d+)\s*mV s\^{-1}',
+            r'sweep rate[:\s-]+([\d.]+)\s*mV/s'
+        ]
+        self._search_patterns(patterns, "Scan rate")
+    
+    def extract_capacitance(self):
+        patterns = [
+            r'specific capacitance[:\s-]+([\d.]+)\s*F/g',
+            r'capacitance of ([\d.]+)\s*F g\^{-1}',
+            r'C_s\s*=\s*([\d.]+)\s*F/g'
+        ]
+        self._search_patterns(patterns, "Specific capacitance")
+    
+    def extract_capacity(self):
+        patterns_mah = [
+            r'specific capacity[:\s-]+([\d.]+)\s*mAh/g',
+            r'capacity of ([\d.]+)\s*mAh g\^{-1}'
+        ]
+        patterns_c = [
+            r'specific capacity[:\s-]+([\d.]+)\s*C/g',
+            r'capacity of ([\d.]+)\s*C g\^{-1}'
+        ]
+        self._search_patterns(patterns_mah, "Specific capacity (mAh/g)")
+        self._search_patterns(patterns_c, "Specific capacity (C/g)")
+    
+    def extract_power_energy_density(self):
+        patterns_power = [
+            r'power density[:\s-]+([\d,]+)\s*W/kg',
+            r'(\d+)\s*W kg\^{-1}'
+        ]
+        patterns_energy = [
+            r'energy density[:\s-]+([\d,]+)\s*Wh/kg',
+            r'(\d+)\s*Wh kg\^{-1}'
+        ]
+        self._search_patterns(patterns_power, "Power density")
+        self._search_patterns(patterns_energy, "Energy density")
+    
+    def extact_stability(self):
+        patterns_cycles = [
+            r'(\d+,?\d+)\s*cycles',
+            r'after (\d+)\s*charge-discharge cycles',
+            r'cycling stability over (\d+)\s*cycles'
+        ]
+        patterns_retention = [
+            r'(\d+\.?\d*)\s*% retention',
+            r'capacity retention of (\d+\.?\d*)\s*%',
+            r'(\d+)\s*% after \d+ cycles'
+        ]
+        self._search_patterns(patterns_cycles, "Stability cycles")
+        self._search_patterns(patterns_retention, "Cyclic stability")
+    
+    def extract_doi(self):
+        patterns = [
+            r'doi\.org/([^\s]+)',
+            r'DOI[:\s]+([^\s]+)',
+            r'Digital Object Identifier[:\s]+([^\s]+)'
+        ]
+        self._search_patterns(patterns, "DOI")
+    
+    def _search_patterns(self, patterns, param_name):
+        """Helper to search multiple regex patterns"""
+        for pattern in patterns:
+            match = re.search(pattern, self.text, re.IGNORECASE)
+            if match:
+                # Handle different match group structures
+                if param_name == "Potential window":
+                    self.parameters[param_name] = f"{match.group(1)}-{match.group(2)} V"
+                elif len(match.groups()) > 1:
+                    self.parameters[param_name] = " ".join(match.groups())
+                else:
+                    self.parameters[param_name] = match.group(1)
+                return
+        
+        # Fallback to sentence extraction for complex parameters
+        if param_name in ["Working material", "Precursor", "Synthesis method"]:
+            self._extract_after_keyword(param_name)
+    
+    def _extract_after_keyword(self, param_name):
+        """Extract text after keyword for complex parameters"""
+        keywords = {
+            "Working material": ["working material", "active material"],
+            "Precursor": ["precursor", "starting material"],
+            "Synthesis method": ["synthesized by", "prepared using"]
+        }
+        
+        for keyword in keywords.get(param_name, []):
+            if keyword in self.text.lower():
+                start_idx = self.text.lower().index(keyword) + len(keyword)
+                snippet = self.text[start_idx:start_idx+100].split('.')[0]
+                self.parameters[param_name] = snippet.strip()
+                return
+    
+    def generate_report(self):
+        """Generate formatted report of extracted parameters"""
+        if not self.parameters:
+            return "No parameters extracted"
+        
+        report = "RESEARCH PAPER ANALYSIS REPORT\n"
+        report += "=" * 50 + "\n"
+        
+        # Group parameters by category
+        categories = {
+            "Material Properties": [
+                "Working material", "Material composition", "Precursor",
+                "Synthesis method", "Binder info", "Material phase",
+                "Morphology", "Porosity", "Surface area"
+            ],
+            "Electrochemical Setup": [
+                "Current collector", "Electrolyte", "Counter electrode",
+                "Reference electrode", "Potential window"
+            ],
+            "Performance Metrics": [
+                "Current density", "Scan rate", "Specific capacitance",
+                "Specific capacity (mAh/g)", "Specific capacity (C/g)",
+                "Power density", "Energy density"
+            ],
+            "Stability": [
+                "Stability cycles", "Cyclic stability"
+            ],
+            "Reference": [
+                "DOI"
+            ]
+        }
+        
+        for category, params in categories.items():
+            report += f"\n{category}:\n"
+            report += "-" * len(category) + "\n"
+            for param in params:
+                value = self.parameters.get(param, "Not found")
+                report += f"- {param}: {value}\n"
+        
+        return report
+    
+    def save_to_csv(self, filename="paper_analysis.csv"):
+        """Save extracted parameters to CSV file"""
+        df = pd.DataFrame([self.parameters])
+        df.to_csv(filename, index=False)
+        return f"Results saved to {filename}"
+
+# Example usage
+if __name__ == "__main__":
+    pdf_file = "supercapacitor_paper.pdf"  # Replace with your PDF path
+    
+    analyzer = ResearchPaperAnalyzer(pdf_file)
+    analyzer.analyze_parameters()
+    
+    # Display results
+    print(analyzer.generate_report())
+    
+    # Save to CSV
+    print(analyzer.save_to_csv())
