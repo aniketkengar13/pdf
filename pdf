@@ -3,13 +3,7 @@ import pdfplumber
 import pandas as pd
 from collections import defaultdict
 
-class ResearchPaperAnalyzer:
-    def __init__(self, pdf_path):
-        self.pdf_path = pdf_path
-        self.text = self.extract_text_from_pdf()
-        self.parameters = defaultdict(lambda: "Not found")
-    
-    def extract_text_from_pdf(self):
+
         """Extract text from PDF using pdfplumber"""
         full_text = ""
         try:
